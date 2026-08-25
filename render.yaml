@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: acca-syndicate
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: DATABASE_PATH
+        value: /var/data/betting_app.db
+    disk:
+      name: acca-data
+      mountPath: /var/data
+      sizeGB: 1

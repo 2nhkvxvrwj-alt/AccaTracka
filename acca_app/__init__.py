@@ -1,0 +1,1 @@
+"""Accumulator syndicate tracker."""
