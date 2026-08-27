@@ -33,11 +33,11 @@ class Repository:
     def connect(self) -> Connection:
         client = build_client(self.path, self.database_url, self.database_auth_token)
         connection = Connection(client)
-        try:
+        if not self.database_url:
+            # PRAGMAs are local-file-specific (WAL journal mode, FK enforcement);
+            # remote libSQL databases manage these settings server-side.
             connection.execute("PRAGMA foreign_keys = ON")
             connection.execute("PRAGMA journal_mode = WAL")
-        except LibsqlError:
-            pass  # Remote libSQL databases manage these settings server-side.
         return connection
 
     def list_members(self) -> list[str]:
