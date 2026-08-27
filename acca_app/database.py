@@ -120,13 +120,19 @@ class Repository:
         if excluded is not None:
             query += " WHERE excluded = ?"
             params.append(int(excluded))
-        query += " ORDER BY timestamp DESC, id DESC"
-        if limit is not None:
-            query += " LIMIT ?"
-            params.append(limit)
         with self.connect() as connection:
             rows = connection.execute(query, params).fetchall()
-            return [self._to_bet(connection, row) for row in rows]
+            bets = [self._to_bet(connection, row) for row in rows]
+        bets.sort(key=lambda bet: (bet.fixture_date, bet.id), reverse=True)
+        if limit is not None:
+            bets = bets[:limit]
+        return bets
+
+    def delete_bet(self, bet_id: int) -> None:
+        with self.connect() as connection:
+            deleted = connection.execute("DELETE FROM bets WHERE id=?", (bet_id,)).rowcount
+        if not deleted:
+            raise ValueError(f"Accumulator #{bet_id} does not exist")
 
     def get_bet(self, bet_id: int) -> BetRecord:
         with self.connect() as connection:

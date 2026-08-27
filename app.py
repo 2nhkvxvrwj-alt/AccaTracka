@@ -208,7 +208,7 @@ def bet_history_view() -> None:
             render_bet(bet, settings.app_currency)
     with receipts_tab:
         if bets:
-            chosen = st.selectbox("Accumulator", bets, format_func=lambda bet: f"#{bet.id} | {bet.timestamp:%d %b %Y}")
+            chosen = st.selectbox("Accumulator", bets, format_func=lambda bet: f"#{bet.id} | {bet.fixture_date:%d %b %Y}")
             display_receipts(chosen.id)
         else:
             st.caption("No receipts saved yet.")
@@ -476,12 +476,20 @@ def manage_bets_view() -> None:
     if not bets:
         st.info("No accumulators available to amend.")
         return
-    chosen = st.selectbox("Accumulator to amend", bets, format_func=lambda bet: f"#{bet.id} | {bet.timestamp:%d %b %Y} | {bet.settlement_status.value.title()}")
+    chosen = st.selectbox("Accumulator to amend", bets, format_func=lambda bet: f"#{bet.id} | {bet.fixture_date:%d %b %Y} | {bet.settlement_status.value.title()}")
     receipt_tab, edit_tab, audit_tab = st.tabs(["Receipt", "Edit", "Audit log"])
     with receipt_tab:
         display_receipts(chosen.id)
     with edit_tab:
         edit_bet_form(chosen)
+        st.divider()
+        with st.expander("Delete this accumulator"):
+            st.warning("This permanently removes the bet, its legs, receipt screenshots, and audit history.")
+            confirm = st.checkbox(f"I'm sure I want to delete accumulator #{chosen.id}", key=f"confirm_delete_{chosen.id}")
+            if st.button("Delete bet and screenshots", type="primary", disabled=not confirm, key=f"delete_{chosen.id}"):
+                repository.delete_bet(chosen.id)
+                st.success(f"Accumulator #{chosen.id} deleted.")
+                st.rerun()
     with audit_tab:
         for entry in repository.list_audit(chosen.id):
             st.markdown(f"**{entry.changed_at:%d %b %Y %H:%M} | {entry.action.title()}**")

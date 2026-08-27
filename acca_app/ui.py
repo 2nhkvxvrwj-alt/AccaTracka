@@ -45,7 +45,7 @@ def render_parsed(parsed: ParsedAccumulator, currency: str) -> None:
 
 def render_bet(bet: BetRecord, currency: str, expanded: bool = False) -> None:
     profit = bet.return_amount - bet.stake
-    label = f"#{bet.id} | {bet.timestamp:%d %b %Y} | {bet.settlement_status.value.title()} | {money(profit, currency)} P/L"
+    label = f"#{bet.id} | {bet.fixture_date:%d %b %Y} | {bet.settlement_status.value.title()} | {money(profit, currency)} P/L"
     with st.expander(label, expanded=expanded):
         cols = st.columns(4)
         cols[0].metric("Stake", money(bet.stake, currency))

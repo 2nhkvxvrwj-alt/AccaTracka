@@ -25,7 +25,7 @@ def syndicate_overall(bets: list[BetRecord]) -> dict[str, float | int]:
 
 def _member_legs(bets: list[BetRecord]) -> dict[str, list[tuple[BetRecord, LegRecord]]]:
     grouped: dict[str, list[tuple[BetRecord, LegRecord]]] = defaultdict(list)
-    for bet in sorted(bets, key=lambda item: item.timestamp):
+    for bet in sorted(bets, key=lambda item: item.fixture_date):
         if not bet.excluded:
             for leg in bet.legs:
                 grouped[leg.member].append((bet, leg))
@@ -92,7 +92,7 @@ def weekly_summary(bets: list[BetRecord]) -> pd.DataFrame:
         if bet.excluded or bet.settlement_status == SettlementStatus.PENDING:
             continue
         lost_legs = sum(leg.settlement_status == SettlementStatus.LOST for leg in bet.legs)
-        rows.append({"Week": bet.timestamp.strftime("%G-W%V"), "Stake": float(bet.stake),
+        rows.append({"Week": bet.fixture_date.strftime("%G-W%V"), "Stake": float(bet.stake),
                      "Return": float(bet.return_amount), "Won": int(bet.settlement_status == SettlementStatus.WON),
                      "Near miss": int(lost_legs == 1), "Accas": 1})
     if not rows:
@@ -108,8 +108,8 @@ def weekly_summary(bets: list[BetRecord]) -> pd.DataFrame:
 
 def selection_history(bets: list[BetRecord], members: list[str]) -> pd.DataFrame:
     rows = []
-    for bet in sorted(bets, key=lambda item: item.timestamp, reverse=True):
-        row: dict[str, object] = {"Date": bet.timestamp.strftime("%d %b %Y"), "Acca": f"#{bet.id}"}
+    for bet in sorted(bets, key=lambda item: item.fixture_date, reverse=True):
+        row: dict[str, object] = {"Date": bet.fixture_date.strftime("%d %b %Y"), "Acca": f"#{bet.id}"}
         by_member = {leg.member: leg for leg in bet.legs}
         for member in members:
             leg = by_member.get(member)
@@ -129,21 +129,21 @@ def selection_history(bets: list[BetRecord], members: list[str]) -> pd.DataFrame
 def cumulative_member_profit(bets: list[BetRecord]) -> pd.DataFrame:
     totals: dict[str, float] = defaultdict(float)
     rows = []
-    for bet in sorted(bets, key=lambda item: item.timestamp):
+    for bet in sorted(bets, key=lambda item: item.fixture_date):
         if bet.excluded:
             continue
         for leg in bet.legs:
             if leg.unit_profit is not None:
                 totals[leg.member] += float(leg.unit_profit)
-                rows.append({"Date": bet.timestamp, "Member": leg.member, "Cumulative unit P/L": totals[leg.member]})
+                rows.append({"Date": bet.fixture_date, "Member": leg.member, "Cumulative unit P/L": totals[leg.member]})
     return pd.DataFrame(rows)
 
 
 def cumulative_syndicate_profit(bets: list[BetRecord]) -> pd.DataFrame:
     total, rows = 0.0, []
-    for bet in sorted(bets, key=lambda item: item.timestamp):
+    for bet in sorted(bets, key=lambda item: item.fixture_date):
         if bet.excluded or bet.settlement_status == SettlementStatus.PENDING:
             continue
         total += float(bet.return_amount - bet.stake)
-        rows.append({"Date": bet.timestamp, "Cumulative P/L": total})
+        rows.append({"Date": bet.fixture_date, "Cumulative P/L": total})
     return pd.DataFrame(rows)

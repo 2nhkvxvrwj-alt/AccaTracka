@@ -178,6 +178,12 @@ class BetRecord(BaseModel):
     confidence: float | None = None
     source_hash: str | None = None
 
+    @property
+    def fixture_date(self) -> date:
+        """Earliest leg fixture date, falling back to the receipt timestamp."""
+        dates = [leg.fixture_date for leg in self.legs if leg.fixture_date is not None]
+        return min(dates) if dates else self.timestamp.date()
+
 
 class ReceiptRecord(BaseModel):
     id: int
