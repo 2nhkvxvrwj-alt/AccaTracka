@@ -39,7 +39,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 settings = get_settings()
-repository = Repository(settings.database_path)
 
 
 def secret(name: str, fallback: str = "") -> str:
@@ -47,6 +46,13 @@ def secret(name: str, fallback: str = "") -> str:
         return str(st.secrets.get(name, fallback))
     except Exception:
         return fallback
+
+
+repository = Repository(
+    settings.database_path,
+    secret("DATABASE_URL", settings.database_url),
+    secret("DATABASE_AUTH_TOKEN", settings.database_auth_token),
+)
 
 
 def authenticate() -> str | None:

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
+from acca_app.db_client import Connection, LibsqlError, build_client
 from acca_app.migrations import migrate
 from acca_app.models import (
     AuditRecord,
@@ -23,17 +23,21 @@ class DuplicateBetError(ValueError):
 
 
 class Repository:
-    def __init__(self, path: Path | str):
+    def __init__(self, path: Path | str, database_url: str = "", database_auth_token: str = ""):
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.database_url = database_url
+        self.database_auth_token = database_auth_token
         with self.connect() as connection:
             migrate(connection)
 
-    def connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path, timeout=15)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
+    def connect(self) -> Connection:
+        client = build_client(self.path, self.database_url, self.database_auth_token)
+        connection = Connection(client)
+        try:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA journal_mode = WAL")
+        except LibsqlError:
+            pass  # Remote libSQL databases manage these settings server-side.
         return connection
 
     def list_members(self) -> list[str]:
@@ -48,7 +52,7 @@ class Repository:
         with self.connect() as connection:
             connection.execute("INSERT OR IGNORE INTO members(name) VALUES (?)", (clean_name,))
 
-    def _member_ids(self, connection: sqlite3.Connection, names: list[str]) -> dict[str, int]:
+    def _member_ids(self, connection: Connection, names: list[str]) -> dict[str, int]:
         if len(names) != len(set(names)):
             raise ValueError("Each member can only own one selection in an accumulator")
         placeholders = ",".join("?" for _ in names)
@@ -107,7 +111,7 @@ class Repository:
                         "INSERT INTO receipt_files (bet_id, filename, mime_type, data, sha256) VALUES (?, ?, ?, ?, ?)",
                         (bet_id, filename, mime_type, data, hashlib.sha256(data).hexdigest()),
                     )
-        except sqlite3.IntegrityError as exc:
+        except LibsqlError as exc:
             if "source_hash" in str(exc):
                 raise DuplicateBetError("This set of receipt images has already been saved") from exc
             raise
@@ -200,7 +204,7 @@ class Repository:
             )
 
     @staticmethod
-    def _to_bet(connection: sqlite3.Connection, row: sqlite3.Row) -> BetRecord:
+    def _to_bet(connection: Connection, row) -> BetRecord:
         leg_rows = connection.execute(
             """SELECT l.*, m.name AS member FROM bet_legs l
                JOIN members m ON m.id=l.member_id WHERE l.bet_id=? ORDER BY l.id""", (row["id"],)

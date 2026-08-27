@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import sqlite3
+from acca_app.db_client import Connection
 
 
 MIGRATIONS: list[tuple[int, str]] = [
@@ -81,9 +81,9 @@ MIGRATIONS: list[tuple[int, str]] = [
 ]
 
 
-def migrate(connection: sqlite3.Connection) -> None:
+def migrate(connection: Connection) -> None:
     connection.execute("CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)")
-    applied = {row[0] for row in connection.execute("SELECT version FROM schema_migrations")}
+    applied = {row[0] for row in connection.execute("SELECT version FROM schema_migrations").fetchall()}
     for version, sql in MIGRATIONS:
         if version not in applied:
             with connection:

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-5.6-luna"
     database_path: Path = Path("data/betting_app.db")
+    database_url: str = ""
+    database_auth_token: str = ""
     app_currency: str = "GBP"
     app_timezone: str = "Europe/London"
     admin_password: str = ""
