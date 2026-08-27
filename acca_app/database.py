@@ -184,14 +184,14 @@ class Repository:
                 "SELECT id, bet_id, filename, mime_type, data FROM receipt_files WHERE bet_id=? ORDER BY id",
                 (bet_id,),
             ).fetchall()
-        return [ReceiptRecord(**dict(row)) for row in rows]
+        return [ReceiptRecord(**row.asdict()) for row in rows]
 
     def list_audit(self, bet_id: int) -> list[AuditRecord]:
         with self.connect() as connection:
             rows = connection.execute(
                 "SELECT * FROM bet_audit_log WHERE bet_id=? ORDER BY changed_at DESC, id DESC", (bet_id,)
             ).fetchall()
-        return [AuditRecord(**dict(row)) for row in rows]
+        return [AuditRecord(**row.asdict()) for row in rows]
 
     def _audit(self, bet_id: int, action: str, before: BetRecord | None, after: BetRecord, note: str | None) -> None:
         before_json = before.model_dump_json() if before else None
