@@ -47,7 +47,16 @@ class Connection:
 
 def build_client(database_path: Path | str, database_url: str, database_auth_token: str) -> libsql.ClientSync:
     if database_url:
-        return libsql.create_client_sync(database_url, auth_token=database_auth_token or None)
+        # Force the HTTP transport (not ws/libsql) since some hosts (e.g. Streamlit
+        # Community Cloud) block or mishandle outbound WebSocket connections.
+        url = database_url
+        if url.startswith("libsql://"):
+            url = "https://" + url[len("libsql://"):]
+        elif url.startswith("ws://"):
+            url = "http://" + url[len("ws://"):]
+        elif url.startswith("wss://"):
+            url = "https://" + url[len("wss://"):]
+        return libsql.create_client_sync(url, auth_token=database_auth_token or None)
     path = Path(database_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     return libsql.create_client_sync(f"file:{path}")
